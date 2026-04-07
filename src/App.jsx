@@ -125,33 +125,16 @@ export default function App() {
   );
 
   const fetchFromTMDB = async (endpoint, params = "") => {
-  const url = `${BASE_URL}${endpoint}?language=en-US${params}`;
+  const query = params.replace("&query=", "");
 
-  console.log("Fetching:", url);
+  const url = `/api/tmdb?endpoint=${endpoint}&query=${encodeURIComponent(query)}`;
 
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${API_KEY}`,
-      },
-    });
+  console.log("Calling API:", url);
 
-    console.log("Status:", response.status);
+  const response = await fetch(url);
+  const data = await response.json();
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`HTTP ${response.status}: ${text}`);
-    }
-
-    const data = await response.json();
-    console.log("Data:", data);
-    return data;
-  } catch (error) {
-    console.error("Fetch failed:", error);
-    throw error;
-  }
+  return data;
 };
   useEffect(() => {
     const loadMovies = async () => {
