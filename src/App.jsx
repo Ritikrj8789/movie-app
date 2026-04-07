@@ -99,6 +99,7 @@ function Row({ title, movies, onSelect, onToggleWatchlist, watchlistIds }) {
 }
 
 export default function App() {
+  const [genres, setGenres] = useState([]);
   const [heroMovie, setHeroMovie] = useState(null);
   const [categories, setCategories] = useState({});
   const [query, setQuery] = useState("");
@@ -148,26 +149,23 @@ export default function App() {
         popular,
         topRated,
         upcoming,
-        bollywood,
-        south,
+        genreData
       ] = await Promise.all([
         fetchFromTMDB("/trending/movie/day"),
         fetchFromTMDB("/movie/popular"),
         fetchFromTMDB("/movie/top_rated"),
         fetchFromTMDB("/movie/upcoming"),
-        fetchFromTMDB("/discover/movie?with_original_language=hi&sort_by=popularity.desc"),
-        fetchFromTMDB("/discover/movie?with_original_language=ta|te|ml|kn&sort_by=popularity.desc"),
+        fetchFromTMDB("/genre/movie/list"),
       ]);
 
       setHeroMovie(trending.results?.[0] || null);
+      setGenres(genreData.genres || []);
 
       setCategories({
         trending: trending.results || [],
         popular: popular.results || [],
         top_rated: topRated.results || [],
         upcoming: upcoming.results || [],
-        bollywood: bollywood.results || [],
-        south: south.results || [],
       });
     } catch (err) {
       console.error(err);
@@ -179,44 +177,40 @@ export default function App() {
 
   loadMovies();
 }, []);
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+ const handleSearch = async () => {
+  if (!query.trim()) return;
 
-    setLoading(true);
-    setError("");
+  setLoading(true);
+  setError("");
 
-    try {
-      const data = await fetchFromTMDB(
+  try {
+    const searchText = query.trim().toLowerCase();
+
+    const matchedGenre = genres.find(
+      (genre) => genre.name.toLowerCase() === searchText
+    );
+
+    let data;
+
+    if (matchedGenre) {
+      data = await fetchFromTMDB(
+        `/discover/movie?with_genres=${matchedGenre.id}&sort_by=popularity.desc`
+      );
+    } else {
+      data = await fetchFromTMDB(
         "/search/movie",
         `&query=${encodeURIComponent(query)}`
       );
-      setSearchResults(data.results || []);
-    } catch (err) {
-      setError("Search failed.");
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const handleSelect = async (id) => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const details = await fetchFromTMDB(`/movie/${id}`);
-      const videos = await fetchFromTMDB(`/movie/${id}/videos`);
-      const trailer = (videos.results || []).find(
-        (video) => video.site === "YouTube" && video.type === "Trailer"
-      );
-
-      setSelectedMovie(details);
-      setTrailerKey(trailer ? trailer.key : "");
-    } catch (err) {
-      setError("Could not open movie details.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSearchResults(data.results || []);
+  } catch (err) {
+    console.error(err);
+    setError("Search failed.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const toggleWatchlist = (movie) => {
     setWatchlist((prev) => {
@@ -261,7 +255,7 @@ export default function App() {
              MOVIE HUB 
           </div>
           <div style={{ fontSize: 13, color: darkMode ? "#aaa" : "#555" }}>
-            Trending • Popular • Top Rated • Upcoming
+            Trending • Popular • Top Rated • Upcoming • Bollywood • South
           </div>
         </div>
 
