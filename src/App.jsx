@@ -19,16 +19,16 @@ function MovieCard({ movie, onSelect, onToggleWatchlist, isSaved }) {
       onClick={() => onSelect(movie.id)}
       onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      style={{
-        minWidth: 180,
-        maxWidth: 180,
-        background: "#111",
-        borderRadius: 12,
-        overflow: "hidden",
-        cursor: "pointer",
-        color: "white",
-        transition: "transform 0.3s ease",
-      }}
+     style={{
+  minWidth: window.innerWidth < 600 ? 140 : 180,
+  maxWidth: 180,
+  background: "#111",
+  borderRadius: 12,
+  overflow: "hidden",
+  cursor: "pointer",
+  color: "white",
+  transition: "transform 0.3s ease",
+}}
     >
       <div style={{
   position: "absolute",
@@ -155,6 +155,15 @@ export default function App() {
 
     return response.json();
   };
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    if (query.trim()) {
+      handleSearch();
+    }
+  }, 500); // delay (500ms)
+
+  return () => clearTimeout(timer);
+}, [query]);
 
   useEffect(() => {
     localStorage.setItem("tmdb_watchlist", JSON.stringify(watchlist));
