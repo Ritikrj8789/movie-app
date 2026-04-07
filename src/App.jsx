@@ -9,6 +9,8 @@ const categoriesList = [
   { key: "popular", title: "Popular Movies", endpoint: "/movie/popular" },
   { key: "top_rated", title: "Top Rated", endpoint: "/movie/top_rated" },
   { key: "upcoming", title: "Upcoming", endpoint: "/movie/upcoming" },
+  { key: "bollywood", title: "Bollywood Movies", endpoint: "/discover/movie?with_original_language=hi&sort_by=popularity.desc" },
+  { key: "south", title: "South Movies", endpoint: "/discover/movie?with_original_language=ta|te|ml|kn&sort_by=popularity.desc" },
 ];
 
 function MovieCard({ movie, onSelect, onToggleWatchlist, isSaved }) {
@@ -122,15 +124,18 @@ export default function App() {
 
   const fetchFromTMDB = async (endpoint, params = "") => {
   const query = params.replace("&query=", "");
-
-  const url = `/api/tmdb?endpoint=${endpoint}&query=${query}`;
+  const url = `/api/tmdb?endpoint=${encodeURIComponent(endpoint)}&query=${encodeURIComponent(query)}`;
 
   console.log("Calling API:", url);
 
   const response = await fetch(url);
-  const data = await response.json();
 
-  return data;
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Request failed");
+  }
+
+  return response.json();
 };
   useEffect(() => {
   const loadMovies = async () => {
@@ -138,11 +143,20 @@ export default function App() {
     setError("");
 
     try {
-      const [trending, popular, topRated, upcoming] = await Promise.all([
+      const [
+        trending,
+        popular,
+        topRated,
+        upcoming,
+        bollywood,
+        south,
+      ] = await Promise.all([
         fetchFromTMDB("/trending/movie/day"),
         fetchFromTMDB("/movie/popular"),
         fetchFromTMDB("/movie/top_rated"),
         fetchFromTMDB("/movie/upcoming"),
+        fetchFromTMDB("/discover/movie?with_original_language=hi&sort_by=popularity.desc"),
+        fetchFromTMDB("/discover/movie?with_original_language=ta|te|ml|kn&sort_by=popularity.desc"),
       ]);
 
       setHeroMovie(trending.results?.[0] || null);
@@ -152,6 +166,8 @@ export default function App() {
         popular: popular.results || [],
         top_rated: topRated.results || [],
         upcoming: upcoming.results || [],
+        bollywood: bollywood.results || [],
+        south: south.results || [],
       });
     } catch (err) {
       console.error(err);
@@ -163,7 +179,6 @@ export default function App() {
 
   loadMovies();
 }, []);
-
   const handleSearch = async () => {
     if (!query.trim()) return;
 
@@ -243,7 +258,7 @@ export default function App() {
       >
         <div>
           <div style={{ color: "red", fontSize: 28, fontWeight: "bold" }}>
-            TMDB MOVIE APP
+             MOVIE HUB 
           </div>
           <div style={{ fontSize: 13, color: darkMode ? "#aaa" : "#555" }}>
             Trending • Popular • Top Rated • Upcoming
