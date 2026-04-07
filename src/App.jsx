@@ -30,6 +30,17 @@ function MovieCard({ movie, onSelect, onToggleWatchlist, isSaved }) {
         transition: "transform 0.3s ease",
       }}
     >
+      <div style={{
+  position: "absolute",
+  bottom: 10,
+  left: 10,
+  background: "rgba(0,0,0,0.7)",
+  padding: "4px 8px",
+  borderRadius: 6,
+  fontSize: 12
+}}>
+  ⭐ {movie.vote_average?.toFixed(1)}
+</div>
       <div style={{ position: "relative", height: 260, background: "#222" }}>
         <img
           src={
