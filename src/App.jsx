@@ -1,8 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-console.log("API_KEY:", API_KEY);
-console.log("ENV:", import.meta.env);
-const BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 const BACKDROP_URL = "https://image.tmdb.org/t/p/original";
 const FALLBACK_POSTER = "https://via.placeholder.com/500x750?text=No+Poster";
@@ -126,7 +123,7 @@ export default function App() {
   const fetchFromTMDB = async (endpoint, params = "") => {
   const query = params.replace("&query=", "");
 
-  const url = `/api/tmdb?endpoint=${endpoint}&query=${encodeURIComponent(query)}`;
+  const url = `/api/tmdb?endpoint=${endpoint}&query=${query}`;
 
   console.log("Calling API:", url);
 
