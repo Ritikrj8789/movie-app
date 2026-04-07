@@ -5,18 +5,20 @@ const BACKDROP_URL = "https://image.tmdb.org/t/p/original";
 const FALLBACK_POSTER = "https://via.placeholder.com/500x750?text=No+Poster";
 
 const categoriesList = [
-  { key: "trending", title: "Trending Now", endpoint: "/trending/movie/day" },
-  { key: "popular", title: "Popular Movies", endpoint: "/movie/popular" },
-  { key: "top_rated", title: "Top Rated", endpoint: "/movie/top_rated" },
-  { key: "upcoming", title: "Upcoming", endpoint: "/movie/upcoming" },
-  { key: "bollywood", title: "Bollywood Movies", endpoint: "/discover/movie?with_original_language=hi&sort_by=popularity.desc" },
-  { key: "south", title: "South Movies", endpoint: "/discover/movie?with_original_language=ta|te|ml|kn&sort_by=popularity.desc" },
+  { key: "trending", title: "Trending Now" },
+  { key: "popular", title: "Popular Movies" },
+  { key: "top_rated", title: "Top Rated" },
+  { key: "upcoming", title: "Upcoming" },
+  { key: "bollywood", title: "Bollywood Movies" },
+  { key: "south", title: "South Movies" },
 ];
 
 function MovieCard({ movie, onSelect, onToggleWatchlist, isSaved }) {
   return (
     <div
       onClick={() => onSelect(movie.id)}
+      onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       style={{
         minWidth: 180,
         maxWidth: 180,
@@ -25,6 +27,7 @@ function MovieCard({ movie, onSelect, onToggleWatchlist, isSaved }) {
         overflow: "hidden",
         cursor: "pointer",
         color: "white",
+        transition: "transform 0.3s ease",
       }}
     >
       <div style={{ position: "relative", height: 260, background: "#222" }}>
@@ -36,6 +39,8 @@ function MovieCard({ movie, onSelect, onToggleWatchlist, isSaved }) {
           }
           alt={movie.title}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onMouseEnter={(e) => (e.target.style.filter = "brightness(1.15)")}
+          onMouseLeave={(e) => (e.target.style.filter = "brightness(1)")}
         />
         <button
           onClick={(e) => {
@@ -82,6 +87,7 @@ function Row({ title, movies, onSelect, onToggleWatchlist, watchlistIds }) {
           gap: 16,
           overflowX: "auto",
           paddingBottom: 10,
+          scrollBehavior: "smooth",
         }}
       >
         {movies.map((movie) => (
@@ -99,7 +105,6 @@ function Row({ title, movies, onSelect, onToggleWatchlist, watchlistIds }) {
 }
 
 export default function App() {
-  const [genres, setGenres] = useState([]);
   const [heroMovie, setHeroMovie] = useState(null);
   const [categories, setCategories] = useState({});
   const [query, setQuery] = useState("");
@@ -109,6 +114,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [darkMode, setDarkMode] = useState(true);
+  const [genres, setGenres] = useState([]);
   const [watchlist, setWatchlist] = useState(() => {
     try {
       const saved = localStorage.getItem("tmdb_watchlist");
@@ -124,93 +130,130 @@ export default function App() {
   );
 
   const fetchFromTMDB = async (endpoint, params = "") => {
-  const query = params.replace("&query=", "");
-  const url = `/api/tmdb?endpoint=${encodeURIComponent(endpoint)}&query=${encodeURIComponent(query)}`;
+    const queryValue = params.replace("&query=", "");
+    const url = `/api/tmdb?endpoint=${encodeURIComponent(
+      endpoint
+    )}&query=${encodeURIComponent(queryValue)}`;
 
-  console.log("Calling API:", url);
+    const response = await fetch(url);
 
-  const response = await fetch(url);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "Request failed");
+    }
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Request failed");
-  }
+    return response.json();
+  };
 
-  return response.json();
-};
   useEffect(() => {
-  const loadMovies = async () => {
+    localStorage.setItem("tmdb_watchlist", JSON.stringify(watchlist));
+  }, [watchlist]);
+
+  useEffect(() => {
+    const loadMovies = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [
+          trending,
+          popular,
+          topRated,
+          upcoming,
+          bollywood,
+          south,
+          genreData,
+        ] = await Promise.all([
+          fetchFromTMDB("/trending/movie/day"),
+          fetchFromTMDB("/movie/popular"),
+          fetchFromTMDB("/movie/top_rated"),
+          fetchFromTMDB("/movie/upcoming"),
+          fetchFromTMDB(
+            "/discover/movie?with_origin_country=IN&with_original_language=hi&sort_by=popularity.desc"
+          ),
+          fetchFromTMDB(
+            "/discover/movie?with_origin_country=IN&with_original_language=ta|te|ml|kn&sort_by=popularity.desc"
+          ),
+          fetchFromTMDB("/genre/movie/list"),
+        ]);
+
+        setHeroMovie(trending.results?.[0] || null);
+        setGenres(genreData.genres || []);
+
+        setCategories({
+          trending: trending.results || [],
+          popular: popular.results || [],
+          top_rated: topRated.results || [],
+          upcoming: upcoming.results || [],
+          bollywood: bollywood.results || [],
+          south: south.results || [],
+        });
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load movies");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMovies();
+  }, []);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+
     setLoading(true);
     setError("");
 
     try {
-      const [
-        trending,
-        popular,
-        topRated,
-        upcoming,
-        genreData
-      ] = await Promise.all([
-        fetchFromTMDB("/trending/movie/day"),
-        fetchFromTMDB("/movie/popular"),
-        fetchFromTMDB("/movie/top_rated"),
-        fetchFromTMDB("/movie/upcoming"),
-        fetchFromTMDB("/genre/movie/list"),
-      ]);
+      const searchText = query.trim().toLowerCase();
 
-      setHeroMovie(trending.results?.[0] || null);
-      setGenres(genreData.genres || []);
+      const matchedGenre = genres.find(
+        (genre) => genre.name.toLowerCase() === searchText
+      );
 
-      setCategories({
-        trending: trending.results || [],
-        popular: popular.results || [],
-        top_rated: topRated.results || [],
-        upcoming: upcoming.results || [],
-      });
+      let data;
+
+      if (matchedGenre) {
+        data = await fetchFromTMDB(
+          `/discover/movie?with_genres=${matchedGenre.id}&sort_by=popularity.desc`
+        );
+      } else {
+        data = await fetchFromTMDB(
+          "/search/movie",
+          `&query=${encodeURIComponent(query)}`
+        );
+      }
+
+      setSearchResults(data.results || []);
     } catch (err) {
       console.error(err);
-      setError("Failed to load movies");
+      setError("Search failed.");
     } finally {
       setLoading(false);
     }
   };
 
-  loadMovies();
-}, []);
- const handleSearch = async () => {
-  if (!query.trim()) return;
+  const handleSelect = async (id) => {
+    setLoading(true);
+    setError("");
 
-  setLoading(true);
-  setError("");
-
-  try {
-    const searchText = query.trim().toLowerCase();
-
-    const matchedGenre = genres.find(
-      (genre) => genre.name.toLowerCase() === searchText
-    );
-
-    let data;
-
-    if (matchedGenre) {
-      data = await fetchFromTMDB(
-        `/discover/movie?with_genres=${matchedGenre.id}&sort_by=popularity.desc`
+    try {
+      const details = await fetchFromTMDB(`/movie/${id}`);
+      const videos = await fetchFromTMDB(`/movie/${id}/videos`);
+      const trailer = (videos.results || []).find(
+        (video) => video.site === "YouTube" && video.type === "Trailer"
       );
-    } else {
-      data = await fetchFromTMDB(
-        "/search/movie",
-        `&query=${encodeURIComponent(query)}`
-      );
+
+      setSelectedMovie(details);
+      setTrailerKey(trailer ? trailer.key : "");
+    } catch (err) {
+      console.error(err);
+      setError("Could not open movie details.");
+    } finally {
+      setLoading(false);
     }
-
-    setSearchResults(data.results || []);
-  } catch (err) {
-    console.error(err);
-    setError("Search failed.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const toggleWatchlist = (movie) => {
     setWatchlist((prev) => {
@@ -252,7 +295,7 @@ export default function App() {
       >
         <div>
           <div style={{ color: "red", fontSize: 28, fontWeight: "bold" }}>
-             MOVIE HUB 
+            TMDB MOVIE APP
           </div>
           <div style={{ fontSize: 13, color: darkMode ? "#aaa" : "#555" }}>
             Trending • Popular • Top Rated • Upcoming • Bollywood • South
@@ -293,7 +336,7 @@ export default function App() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.35), rgba(0,0,0,0.15))",
+                "linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0.6), rgba(0,0,0,0.2))",
             }}
           />
 
@@ -325,7 +368,7 @@ export default function App() {
 
       <div style={{ textAlign: "center", padding: 30 }}>
         <input
-          placeholder="Search movies..."
+          placeholder="Search movies or genres like thriller, action..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -337,11 +380,15 @@ export default function App() {
             marginRight: 10,
             backgroundColor: darkMode ? "#111" : "white",
             color: darkMode ? "white" : "black",
+            outline: "none",
+            boxShadow: "0 0 10px rgba(255,0,0,0.3)",
           }}
         />
 
         <button
           onClick={handleSearch}
+          onMouseEnter={(e) => (e.target.style.opacity = 0.8)}
+          onMouseLeave={(e) => (e.target.style.opacity = 1)}
           style={{
             padding: "12px 20px",
             backgroundColor: "red",
@@ -350,6 +397,7 @@ export default function App() {
             borderRadius: 6,
             cursor: "pointer",
             fontWeight: "bold",
+            transition: "0.3s",
           }}
         >
           Search
@@ -364,7 +412,7 @@ export default function App() {
 
       {loading && (
         <p style={{ textAlign: "center", color: "#aaa", marginBottom: 20 }}>
-          Loading...
+          🎬 Loading awesome movies...
         </p>
       )}
 
@@ -471,9 +519,10 @@ export default function App() {
               <iframe
                 width="100%"
                 height="300"
-                src={`https://www.youtube.com/embed/${trailerKey}`}
+                src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
                 title="Trailer"
                 frameBorder="0"
+                allow="autoplay; encrypted-media"
                 allowFullScreen
               />
             ) : (
@@ -491,10 +540,18 @@ export default function App() {
               style={{ marginTop: 15, borderRadius: 8 }}
             />
 
-            <p><b>Release Date:</b> {selectedMovie.release_date}</p>
-            <p><b>Rating:</b> {selectedMovie.vote_average}</p>
-            <p><b>Runtime:</b> {selectedMovie.runtime} min</p>
-            <p><b>Overview:</b> {selectedMovie.overview}</p>
+            <p>
+              <b>Release Date:</b> {selectedMovie.release_date}
+            </p>
+            <p>
+              <b>Rating:</b> {selectedMovie.vote_average}
+            </p>
+            <p>
+              <b>Runtime:</b> {selectedMovie.runtime} min
+            </p>
+            <p>
+              <b>Overview:</b> {selectedMovie.overview}
+            </p>
 
             <button
               onClick={() => toggleWatchlist(selectedMovie)}
