@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 console.log("API_KEY:", API_KEY);
 console.log("ENV:", import.meta.env);
 const BASE_URL = "https://api.themoviedb.org/3";
@@ -137,44 +136,36 @@ export default function App() {
   return data;
 };
   useEffect(() => {
-    const loadMovies = async () => {
-      setLoading(true);
-      setError("");
+  const loadMovies = async () => {
+    setLoading(true);
+    setError("");
 
-      try {
-        console.log("API_KEY:", API_KEY);
+    try {
+      const [trending, popular, topRated, upcoming] = await Promise.all([
+        fetchFromTMDB("/trending/movie/day"),
+        fetchFromTMDB("/movie/popular"),
+        fetchFromTMDB("/movie/top_rated"),
+        fetchFromTMDB("/movie/upcoming"),
+      ]);
 
-        const [trending, popular, topRated, upcoming] = await Promise.all([
-          fetchFromTMDB("/trending/movie/day"),
-          fetchFromTMDB("/movie/popular"),
-          fetchFromTMDB("/movie/top_rated"),
-          fetchFromTMDB("/movie/upcoming"),
-        ]);
+      setHeroMovie(trending.results?.[0] || null);
 
-        setHeroMovie(trending.results?.[0] || null);
-
-        setCategories({
-          trending: trending.results || [],
-          popular: popular.results || [],
-          top_rated: topRated.results || [],
-          upcoming: upcoming.results || [],
-        });
-      } catch (err) {
-        console.error("Load error:", err);
-        setError(`Failed to load movies: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!API_KEY) {
-      setError("TMDB API key missing. Check your .env file.");
+      setCategories({
+        trending: trending.results || [],
+        popular: popular.results || [],
+        top_rated: topRated.results || [],
+        upcoming: upcoming.results || [],
+      });
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load movies");
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    loadMovies();
-  }, []);
+  loadMovies();
+}, []);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
