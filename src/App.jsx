@@ -295,7 +295,7 @@ export default function App() {
       >
         <div>
           <div style={{ color: "red", fontSize: 28, fontWeight: "bold" }}>
-            TMDB MOVIE APP
+            MOVIE HUB 
           </div>
           <div style={{ fontSize: 13, color: darkMode ? "#aaa" : "#555" }}>
             Trending • Popular • Top Rated • Upcoming • Bollywood • South
